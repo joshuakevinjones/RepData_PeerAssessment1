@@ -81,6 +81,109 @@ knitr::opts_chunk$set(cache=TRUE)
 
 ## Imputing missing values
 
+```{r}
+  # calculate and report the total # of missing values in the dataset (NAs)
+    # method 1    
+    sum(is.na(data)) #2304
+    
+    # method 2
+    nrow(data[is.na(data$steps),]) #2304
+    
+    # method 3
+    missing<-is.na(data$steps) #2304
+    sum(missing)
 
+    # method 4
+    sapply(data, function(X) sum(is.na(X)))
 
+  # devise a strategy for filling in all of the missing values in the dataset
+    # method 1
+    data2 <- data # 'data' is original
+    nas <- is.na(data2$steps)
+    avg_interval<- tapply(data2$steps, data2$interval, mean, na.rm=TRUE, simplify = TRUE)
+    data2$steps[nas] <- avg_interval[as.character(data2$interval[nas])]
+    #data2 is now clean
+    
+      # check for na in new data
+      sum(is.na(data2)) #0
+
+  # create a new dataset that is equal to the original dataset but with the missing data filled in
+    # see either data2 or clean_data above
+      
+  # make a histogram of the total number of steps taken each day and 
+    # Calculate and report the mean and median total number of steps taken per day.
+      byDate2 <- group_by(data2, date)
+      stepsByDate2 <- summarise(byDate2, sumSteps = sum(steps, na.rm=TRUE), countSteps = n())
+      
+      # make a histogram of the total number of steps taken each day
+      ggplot(stepsByDate2, aes(x = sumSteps)) +
+        geom_histogram(
+          binwidth=1000
+          , alpha=.5
+          , position="identity"
+          , fill="purple"
+          #, col="red"
+          ) +
+        ggtitle ("Histogram of daily steps") +
+        xlab ("Totals") +
+        ylab ("Frequency")
+      
+      # calculate and report the mean and meadian of the total number of steps taken per day
+      # mean
+      meanMedian2 <- stepsByDate2 %>%
+        #filter(!is.na(sumSteps)) %>%
+        summarise(
+          mean=mean(sumSteps, na.rm=TRUE),
+          median = median(sumSteps, na.rm=TRUE)
+        )
+      
+      meanMedian2
+      meanMedian
+      meanMedian - meanMedian2
+      
+    # Do these values differ from the estimates from the first part of the assignment? 
+      # yes 
+      
+    # What is the impact of imputing missing data on the estimates of the total daily number of steps?
+      # the mean now = the median
+
+```
+            
 ## Are there differences in activity patterns between weekdays and weekends?
+
+```{r}
+  # may want to use weekdays() function
+      
+  # create a new factor variable in the dataset with two levels - "weekday" and "weekend" indicating whether a given date is a weekday or weekend day
+    # method 1
+    data2 <- data2 %>%
+      mutate(dayType = ifelse(weekdays(data2$date) == "Saturday" | weekdays(data2$date) == "Sunday", "Weekend", "Weekday"))
+    
+    # method 2
+    data2 <- data2 %>%
+      mutate(dayType = ifelse(weekdays(data2$date) %in% c("Saturday", "Sunday"), "Weekend", "Weekday"))
+    
+    head(data2)
+    
+  # make a panel plot containing a time-series plot (type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across
+  # all weekdays or weekend days (y-axis)
+  daySlice <- data2 %>%
+    group_by(interval, dayType) %>%
+    summarise(avg_steps2 = mean(steps, na.rm = TRUE))
+
+    # method 1
+    ggplot(daySlice, aes(x = interval , y = avg_steps2, color = dayType)) +
+      geom_line() +
+      geom_point() +
+      labs(title = "Mean daily steps by dayType", x = "Interval", y = "No. of steps") +
+      facet_wrap(~dayType, ncol = 1, nrow = 2)
+    
+    # method 2
+    ggplot(daySlice, aes(x = interval , y = avg_steps2)) +
+      geom_line(size=.7, position="identity", color = "darkred") +
+      facet_grid(dayType ~ .)+
+      ggtitle ("Time series plot of the average number of steps taken by weekday") +
+      xlab("5-minute intervals") +
+      ylab(" Average Number of Steps Taken")
+```
+
